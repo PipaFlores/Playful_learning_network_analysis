@@ -1,0 +1,414 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+library(ppcor)
+library(bootnet)
+library(xtable)
+```
+
+
+
+```{r, echo=FALSE}
+ Data <- read_excel("C:/Users/Localadmin_pabflore/OneDrive - University of Helsinki/Hipercog/Others minor projects/Vivi's article/PlayfulLerning_DATA version2 separate play (4).xls", sheet = "Playful learning")
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+# View(PlayfulLerning_DATA_version2_separate_play_4_)
+```
+
+```{r describe, include=FALSE}
+
+summary(Data)
+str(Data)
+```
+
+```{r describe per grade, include=FALSE}
+Data %>%
+  group_by(grade) %>%
+  summarise(
+    n = n(),
+    mean = mean(`SUM FLOW`),
+    sd = sd(`SUM FLOW`)
+  )
+```
+
+```{r select relevant variables}
+Data <- Data %>%
+  dplyr::select(grade, `engage1`,`engage2`,`engage3`,`SUM FLOW`, `SUM intric`, `SUM identifie`, `SUM exter`, `SUM amoti`, `SUM perimp`) %>%
+  rename(
+    flow = `SUM FLOW`,
+    intrinsic_motivation = `SUM intric`,
+    identified_regulation = `SUM identifie`,
+    external_regulation = `SUM exter`,
+    amotivation = `SUM amoti`,
+    perceived_importance = `SUM perimp`
+  ) %>%
+  mutate(
+    grade = factor(grade)
+  )
+```
+
+
+```{r creating dummy datasets grouping grades}
+
+Data2 <- Data %>%
+  mutate(
+    grade = ifelse(grade == 4 | grade == 5, 45, ifelse(grade == 6 | grade == 7, 67, 89))
+  ) %>% 
+  mutate(
+    grade = factor(grade)
+  )
+
+Data3 <- Data %>%
+  mutate(
+    grade = ifelse(grade == 4 | grade == 5 | grade == 6, 456, 789)
+  ) %>%
+  mutate(
+    grade = factor(grade)
+  )
+
+
+```
+
+
+```{r mean for each variable per grade, include=FALSE}
+Data %>%
+  gather(key = "variable", value = "value", -grade) %>%
+  group_by(grade, variable) %>%
+  summarise(
+    mean = mean(value),
+    sd = sd(value)
+  )
+```
+
+```{r plot mean for each variable per grade, eval=FALSE}
+Data %>%
+  gather(key = "variable", value = "value", -grade) %>%
+  ggplot(aes(x = grade, y = value, fill = grade)) +
+  geom_violin() +
+  geom_boxplot(width = 0.1) +
+  facet_wrap(~variable, scales = "free_y") +
+  theme_minimal() +
+  labs(title = "Violin plot per grade")
+
+Data2 %>%
+  gather(key = "variable", value = "value", -grade) %>%
+  ggplot(aes(x = grade, y = value, fill = grade)) +
+  geom_violin() +
+  geom_boxplot(width = 0.1) +
+  facet_wrap(~variable, scales = "free_y") +
+  theme_minimal() +
+  labs(title = "Violin plot, 3 groups")
+
+Data3 %>%
+  gather(key = "variable", value = "value", -grade) %>%
+  ggplot(aes(x = grade, y = value, fill = grade)) +
+  geom_violin() +
+  geom_boxplot(width = 0.1) +
+  facet_wrap(~variable, scales = "free_y") +
+  theme_minimal() +
+  labs(title = "Violin plot, 2 groups")
+```
+
+```{r ggpair with ggally, fig.width=10, fig.height=10, eval=FALSE}
+library(GGally)
+ggpaircor <- Data|> GGally::ggpairs(columns = 2:10 ,upper = list(combo = wrap("cor", method = "spearman"), continuous = wrap("cor", method = "pearson", normal=FALSE, exact=FALSE)), ggplot2::aes(colour = grade), title = "per grade")
+
+ggpaircor
+
+ggpaircor <- Data2|> GGally::ggpairs(columns = 2:10 ,upper = list(combo = wrap("cor", method = "spearman"), continuous = wrap("cor", method = "spearman", normal=FALSE, exact=FALSE)), ggplot2::aes(colour = grade), title = "3 groups")
+
+ggpaircor
+
+ggpaircor <- Data3|> GGally::ggpairs(columns = 2:10 ,upper = list(combo = wrap("cor", method = "spearman"), continuous = wrap("cor", method = "spearman", normal=FALSE, exact=FALSE)), ggplot2::aes(colour = grade), title = "2 groups")
+
+ggpaircor
+
+```
+
+
+```{r plot mean for flow and identification per grade as boxes next to each other, eval=FALSE}
+Data %>%
+  pivot_longer(cols = c(flow, identified_regulation), names_to = "variable", values_to = "value") %>%
+  ggplot(aes(x =grade, y = value, fill = variable)) +
+  geom_boxplot( position = "dodge") +
+  theme_minimal()
+```
+
+```{r creating dummy variables for grades}
+# group two grades together (e.g., 4 and 5)
+
+## this was an idea by ben that failed.
+# Data_dummy2 <- mutate(Data,
+#   grade_45 = ifelse(grade == 4 | grade == 5, 1, 0),
+#   grade_67 = ifelse(grade == 6 | grade == 7, 1, 0),
+#   grade_89 = ifelse(grade == 8 | grade == 9, 1, 0)
+# )
+
+```
+
+```{r create new df for each grade}
+Data_4 <- filter(Data, grade == "4")
+Data_5 <- filter(Data, grade == "5")
+Data_6 <- filter(Data, grade == "6")
+Data_7 <- filter(Data, grade == "7")
+Data_8 <- filter(Data, grade == "8")
+Data_9 <- filter(Data, grade == "9")
+
+# Grouping by two courses
+Data_45 <- filter(Data, grade == 4 | grade == 5)
+Data_67 <- filter(Data, grade == 6 | grade == 7)
+Data_89 <- filter(Data, grade == 8 | grade == 9)
+
+# Group 456 and 789
+Data_456 <- filter(Data, grade == 4 | grade == 5 | grade == 6)
+Data_789 <- filter(Data, grade == 7 | grade == 8 | grade == 9)
+
+
+# Array with all the datas
+Data_array <- list(Data_456, Data_789) ## In two groups
+Data_array2 <- list(Data_45, Data_67, Data_89) # In three
+Data_array3 <- list(Data_4, Data_5, Data_6, Data_7, Data_8, Data_9) # Per grade
+
+```
+
+
+
+
+```{r loading network model, eval=FALSE, echo=FALSE}
+## names(wholeinteraction) <-c("names")
+Network <- Data |>
+         dplyr::select(!c(grade)) |> estimateNetwork(default ="cor", corMethod = "cor", corArgs = c(method = "spearman"),
+            nonPositiveDefinite = "continue", alpha = 0.05)
+
+## loop through the array of dataframes and estimate the network for each grade
+Network_array <- lapply(Data_array, function(x) {
+  x |>
+    dplyr::select(!c(grade)) |>
+    estimateNetwork(default ="cor", corMethod = "cor", corArgs = c(method = "spearman"),
+            nonPositiveDefinite = "continue", alpha = 0.05)
+})
+
+Network_array2 <- lapply(Data_array2, function(x) {
+  x |>
+    dplyr::select(!c(grade)) |>
+    estimateNetwork(default ="cor", corMethod = "cor", corArgs = c(method = "spearman"),
+            nonPositiveDefinite = "continue", alpha = 0.05)
+})
+
+Network_array3 <- lapply(Data_array3, function(x) {
+  x |>
+    dplyr::select(!c(grade)) |>
+    estimateNetwork(default ="cor", corMethod = "cor", corArgs = c(method = "spearman"),
+            nonPositiveDefinite = "continue", alpha = 0.05)
+})
+
+```
+
+```{r, eval=FALSE, echo=FALSE}
+CentralStability <- bootnet(Network, nBoots = 2500,
+                            type = "case",
+                            caseMin= 0,
+                            caseMax= 0.6,
+                            statistics = c("strength", "expectedInfluence"))
+
+
+CentralStability_array <- lapply(Network_array, function(x) {
+  x |> 
+    bootnet(nBoots = 2500,
+            type = "case",
+            caseMin = 0,
+            caseMax= 0.6,
+            statistics = c("strength", "expectedInfluence"))
+})
+
+CentralStability_array2 <- lapply(Network_array2, function(x) {
+  x |> 
+    bootnet(nBoots = 2500,
+            type = "case",
+            caseMin = 0,
+            caseMax= 0.6,
+            statistics = c("strength", "expectedInfluence"))
+})
+
+CentralStability_array3 <- lapply(Network_array3, function(x) {
+  x |> 
+    bootnet(nBoots = 2500,
+            type = "case",
+            caseMin = 0,
+            caseMax= 0.6,
+            statistics = c("strength",  "expectedInfluence"))
+})
+```
+
+```{r, eval=FALSE, echo=FALSE}
+
+EdgeWgt <- bootnet(Network, nBoots = 2500)
+
+EdgeWgt_array <- lapply(Network_array, function(x) {
+  x |> 
+    bootnet(nBoots = 2500)
+})
+
+EdgeWgt_array2 <- lapply(Network_array2, function(x) {
+  x |> 
+    bootnet(nBoots = 2500)
+})
+
+Edgewgt_array3 <- lapply(Network_array3, function(x) {
+  x |> 
+    bootnet(nBoots = 2500)
+})
+
+save(Network, Network_array, Network_array2, Network_array3,CentralStability, CentralStability_array, CentralStability_array2, CentralStability_array3,
+     EdgeWgt, EdgeWgt_array, EdgeWgt_array2, Edgewgt_array3, file = "Networkestimates.RData")
+
+```
+
+# Network Analysis 
+
+In these networks, each node (circle) represents a variable, and the edges (lines) represent the strength of the relationship between the variables. The thickness of the edges represents the strength of the relationship. The color of the edges represents the direction of the relationship (blue for positive and red for negative). 
+
+The edges are calculated as Spearman correlations. The networks are bootstrapped and thresholded at a correlation strenght of 0.4 and a significance level of 0.002 after Bonferroni correction (edges, or correlations, above these values do not appear on the networks)
+
+
+# All grades
+```{r}
+load("Networkestimates.RData")
+```
+
+```{r}
+# getting thresholded networks for significane level 0.002, after bonferroni correction.
+Network_t <- EdgeWgt |>
+  bootThreshold(alpha = 0.002)
+
+Network_t_array <- lapply(EdgeWgt_array, function(x) {
+  x |>
+    bootThreshold(alpha = 0.002)
+})
+
+Network_t_array2 <- lapply(EdgeWgt_array2, function(x) {
+  x |>
+    bootThreshold(alpha = 0.002)
+})
+
+Network_t_array3 <- lapply(Edgewgt_array3, function(x) {
+  x |>
+    bootThreshold(alpha = 0.002)
+})
+
+```
+
+```{r}
+names <- c("Interest", "Skill", "Challenge", "Flow", "Intrinsic\nmotivation", "Identified\nregulation", "External\nregulation", "Amotivation", "Perceived\nimportance")
+
+plotnet <- function(network, title){
+  plot(network,
+       layout= "circle",
+       title = title,
+       threshold  = 0.4,
+       labels = names,
+       edge.labels = TRUE,
+       label.cex = 1.17,
+       # filetype='pdf',
+       # filename = paste("figures/", title, sep = ""),
+       vsize = 10
+       )
+}
+
+plotnet(Network_t, "Correlation Network of all grades")
+
+# plot(EdgeWgt, plot = "area",
+#      labels = TRUE,
+#      order = "sample",
+#      CIstyle = "quantiles",
+#      title.cex = 1,
+#      areaAlpha = 0.1)
+# 
+# plot(CentralStability, statistics = c("strength"))
+# 
+
+
+```
+
+
+
+
+
+# In two groups (grades 4-5-6 and 7-8-9)
+
+```{r plotting network}
+#  define plotting function
+
+
+
+plotnet(Network_t_array[[1]], "Correlation Network of grades 4-5-6")
+plotnet(Network_t_array[[2]], "Correlation Network of grades 7-8-9")
+
+
+# plot(CentralStability_array[[1]], statistics = c("strength"))
+# plot(CentralStability_array[[2]], statistics = c("strength"))
+# 
+# corStability(CentralStability_array[[1]], statistics = c("strength"))
+# corStability(CentralStability_array[[2]], statistics = c("strength"))
+
+```
+
+# In three groups (grades 4-5, 6-7, 8-9)
+
+```{r plotting network2}
+
+plotnet(Network_t_array2[[1]], "Correlation Network of grades 4-5")
+plotnet(Network_t_array2[[2]], "Correlation Network of grades 6-7")
+plotnet(Network_t_array2[[3]], "Correlation Network of grades 8-9")
+
+
+# plot(CentralStability_array2[[1]], statistics = c("strength"))
+# plot(CentralStability_array2[[2]], statistics = c("strength"))
+# plot(CentralStability_array2[[3]], statistics = c("strength"))  
+# 
+# corStability(CentralStability_array2[[1]], statistics = c("strength"))
+# corStability(CentralStability_array2[[2]], statistics = c("strength"))
+# corStability(CentralStability_array2[[3]], statistics = c("strength"))
+
+```
+
+
+
+
+# Per grade
+
+```{r plotting network3}
+
+plotnet(Network_t_array3[[1]], "Correlation Network of grade 4")
+plotnet(Network_t_array3[[2]], "Correlation Network of grade 5")
+plotnet(Network_t_array3[[3]], "Correlation Network of grade 6")
+plotnet(Network_t_array3[[4]], "Correlation Network of grade 7")
+plotnet(Network_t_array3[[5]], "Correlation Network of grade 8")
+plotnet(Network_t_array3[[6]], "Correlation Network of grade 9")
+
+# plot(CentralStability_array3[[1]], statistics = c("strength"))
+# plot(CentralStability_array3[[2]], statistics = c("strength"))
+# plot(CentralStability_array3[[3]], statistics = c("strength"))
+# plot(CentralStability_array3[[4]], statistics = c("strength"))
+# plot(CentralStability_array3[[5]], statistics = c("strength"))
+# plot(CentralStability_array3[[6]], statistics = c("strength"))
+# 
+# 
+# corStability(CentralStability_array3[[1]], statistics = c("strength"))
+# corStability(CentralStability_array3[[2]], statistics = c("strength"))
+# corStability(CentralStability_array3[[3]], statistics = c("strength"))
+# corStability(CentralStability_array3[[4]], statistics = c("strength"))
+# corStability(CentralStability_array3[[5]], statistics = c("strength"))
+# corStability(CentralStability_array3[[6]], statistics = c("strength"))
+```
+
+
+
+
+
