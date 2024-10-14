@@ -39,14 +39,14 @@ Data %>%
 
 ```{r select relevant variables}
 Data <- Data %>%
-  dplyr::select(grade, `engage1`,`engage2`,`engage3`,`SUM FLOW`, `SUM intric`, `SUM identifie`, `SUM exter`, `SUM amoti`, `SUM perimp`) %>%
+  dplyr::select(grade, `engage1`,`engage2`,`engage3`,`SUM FLOW`, `SUM perimp`, `SUM intric`, `SUM identifie`, `SUM exter`, `SUM amoti`) %>%
   rename(
     flow = `SUM FLOW`,
+    perceived_importance = `SUM perimp`,
     intrinsic_motivation = `SUM intric`,
     identified_regulation = `SUM identifie`,
     external_regulation = `SUM exter`,
-    amotivation = `SUM amoti`,
-    perceived_importance = `SUM perimp`
+    amotivation = `SUM amoti`
   ) %>%
   mutate(
     grade = factor(grade)
@@ -244,6 +244,8 @@ CentralStability_array3 <- lapply(Network_array3, function(x) {
             caseMax= 0.6,
             statistics = c("strength",  "expectedInfluence"))
 })
+
+save(CentralStability, CentralStability_array, CentralStability_array2, CentralStability_array3, file = "CentralStability.RData")
 ```
 
 ```{r, eval=FALSE, echo=FALSE}
@@ -265,7 +267,7 @@ Edgewgt_array3 <- lapply(Network_array3, function(x) {
     bootnet(nBoots = 2500)
 })
 
-save(Network, Network_array, Network_array2, Network_array3,CentralStability, CentralStability_array, CentralStability_array2, CentralStability_array3,
+save(Network, Network_array, Network_array2, Network_array3,
      EdgeWgt, EdgeWgt_array, EdgeWgt_array2, Edgewgt_array3, file = "Networkestimates.RData")
 
 ```
@@ -276,10 +278,13 @@ In these networks, each node (circle) represents a variable, and the edges (line
 
 The edges are calculated as Spearman correlations. The networks are bootstrapped and thresholded at a correlation strenght of 0.4 and a significance level of 0.002 after Bonferroni correction (edges, or correlations, above these values do not appear on the networks)
 
+Nodes are coloured and grouped by the constructs they represent. The constructs are: Yellow for SES (Situational Engagement Scale), blue for Flow, and green for SIMS (Situational Motivation Scale).
+
 
 # All grades
 ```{r}
 load("Networkestimates.RData")
+# load("CentralStability.RData")
 ```
 
 ```{r}
@@ -304,14 +309,23 @@ Network_t_array3 <- lapply(Edgewgt_array3, function(x) {
 
 ```
 
+
 ```{r}
-names <- c("Interest", "Skill", "Challenge", "Flow", "Intrinsic\nmotivation", "Identified\nregulation", "External\nregulation", "Amotivation", "Perceived\nimportance")
+names <- c("Interest", "Skill", "Challenge", "Flow", "Perceived\nimportance", "Intrinsic\nmotivation", "Identified\nregulation", "External\nregulation", "Amotivation" )
+
+# indexes of variables in names
+
+groups <- list("SES" = names %in% c("Interest", "Skill", "Challenge"),
+            "Flow" = names %in% c("Flow", "Perceived\nimportance"),
+            "SIMS" = names %in% c("Intrinsic\nmotivation", "Identified\nregulation", "External\nregulation", "Amotivation"))
 
 plotnet <- function(network, title){
   plot(network,
        layout= "circle",
+       groups = groups,
+       legend = FALSE,
        title = title,
-       threshold  = 0.4,
+       threshold  = 0.45,
        labels = names,
        edge.labels = TRUE,
        label.cex = 1.17,
